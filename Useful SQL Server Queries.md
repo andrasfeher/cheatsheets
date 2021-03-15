@@ -39,7 +39,7 @@
 - [Tracking the progress of the CREATE INDEX command](#tracking-the-progress-of-the-create-index-command)
 - [Reason for not backup up the log](#reason-for-not-backup-up-the-log)
 - [Trace to discover locking](#trace-to-discover-locking)
-
+- [Making database to read only – changing database to read_write](#making-database-to-read-only–changing-database-to-read_write)
 
 # Status of DBCC commands running in the background
 ```SQL
@@ -1147,4 +1147,20 @@ SELECT *
 FROM fn_trace_gettable('E:\Traces\AF-BlockedProcesses.trc', default)
 GO
 
+```
+
+# Making database to read only – changing database to read_write
+
+https://blog.sqlauthority.com/2011/04/16/sql-server-making-database-to-read-only-changing-database-to-readwrite/
+
+```SQL
+USE [master]
+GO
+ALTER DATABASE [TESTDB] SET READ_ONLY WITH NO_WAIT
+GO
+
+USE [master]
+GO
+ALTER DATABASE [TESTDB] SET READ_WRITE WITH NO_WAIT
+GO
 ```
