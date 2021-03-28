@@ -40,6 +40,7 @@
 - [Reason for not backup up the log](#reason-for-not-backup-up-the-log)
 - [Trace to discover locking](#trace-to-discover-locking)
 - [Making database to read only – changing database to read_write](#making-database-to-read-only–changing-database-to-read_write)
+- [Find outdated statistics](#find-outdated-statistics)
 
 # Status of DBCC commands running in the background
 ```SQL
@@ -1163,4 +1164,35 @@ USE [master]
 GO
 ALTER DATABASE [TESTDB] SET READ_WRITE WITH NO_WAIT
 GO
+```
+
+# Find outdated statistics
+```SQL
+SELECT DISTINCT
+	OBJECT_SCHEMA_NAME(s.[object_id]) AS SchemaName,
+	OBJECT_NAME(s.[object_id]) AS TableName,
+	c.name AS ColumnName,
+	s.name AS StatName,
+	STATS_DATE(s.[object_id], s.stats_id) AS LastUpdated,
+	DATEDIFF(d, STATS_DATE(s.[object_id], s.stats_id), getdate()) DaysOld,
+	dsp.modification_counter,
+	s.auto_created,
+	s.user_created,
+	s.no_recompute,
+	s.[object_id],
+	s.stats_id,
+	sc.stats_column_id,
+	sc.column_id
+FROM sys.stats s
+	JOIN sys.stats_columns sc
+	ON sc.[object_id] = s.[object_id] AND sc.stats_id = s.stats_id
+	JOIN sys.columns c ON c.[object_id] = sc.[object_id] AND c.column_id = sc.column_id
+	JOIN sys.partitions par ON par.[object_id] = s.[object_id]
+	JOIN sys.objects obj ON par.[object_id] = obj.[object_id]
+	CROSS APPLY sys.dm_db_stats_properties(sc.[object_id], s.stats_id) AS dsp
+WHERE OBJECTPROPERTY(s.object_id, 'IsUserTable') = 1
+-- AND (s.auto_create = 1 OR s.user_created = 1) -- filter out stats for indexes
+ORDER BY DaysOld;
+
+-- exec sp_updatestats; if necessary
 ```
