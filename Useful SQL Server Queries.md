@@ -41,6 +41,8 @@
 - [Trace to discover locking](#trace-to-discover-locking)
 - [Making database to read only – changing database to read_write](#making-database-to-read-only–changing-database-to-read_write)
 - [Find outdated statistics](#find-outdated-statistics)
+- [Get empty space in each database file](#get-empty-space-in-each-database-file)
+
 
 # Status of DBCC commands running in the background
 ```SQL
@@ -1195,4 +1197,29 @@ WHERE OBJECTPROPERTY(s.object_id, 'IsUserTable') = 1
 ORDER BY DaysOld;
 
 -- exec sp_updatestats; if necessary
+```
+
+# Get empty space in each database file
+
+```SQL
+Create Table ##temp
+(
+    DatabaseName sysname,
+    Name sysname,
+    physical_name nvarchar(500),
+    size decimal (18,2),
+    FreeSpace decimal (18,2)
+)   
+Exec sp_msforeachdb '
+Use [?];
+Insert Into ##temp (DatabaseName, Name, physical_name, Size, FreeSpace)
+    Select DB_NAME() AS [DatabaseName], Name,  physical_name,
+    Cast(Cast(Round(cast(size as decimal) * 8.0/1024.0,2) as decimal(18,2)) as nvarchar) Size,
+    Cast(Cast(Round(cast(size as decimal) * 8.0/1024.0,2) as decimal(18,2)) -
+        Cast(FILEPROPERTY(name, ''SpaceUsed'') * 8.0/1024.0 as decimal(18,2)) as nvarchar) As FreeSpace
+    From sys.database_files
+'
+Select * From ##temp
+drop table ##temp
+
 ```
